@@ -1,0 +1,124 @@
+from django.template import Context, loader
+from polls.models import Poll
+from django.http import HttpResponse
+from django.core.context_processors import csrf
+from fileapp.models import User, File2
+from django.shortcuts import redirect
+#from .forms import UploadFileForm
+import urllib, cgi, hashlib, sys
+
+def perr(x):
+    errfile=open("errfile","a")
+    errfile.write(str(x))
+    errfile.close()
+
+def getErrorURL(message, redirect_link):
+    return '/error?message='+urllib.quote_plus(message)+'&link='+urllib.quote_plus(redirect_link)
+
+def home(request):
+    # latest_poll_list = Poll.objects.all().order_by('-pub_date')[:5]
+    logged_in_username=''
+    try:
+        logged_in_username=request.session['username'] #exception may be raised here (example session does not have key 'username'
+        if not logged_in_username: #if i have signed out then session variable will be none
+            raise Exception('abcd')
+    except Exception:
+        return redirect("/signin")
+    t = loader.get_template('fileapp/home.html')
+    c = Context({
+        'username': logged_in_username,
+        'files': [{'filename':cgi.escape('maggi',quote=True), 'filename_for_url':urllib.quote_plus('maggi')}]
+    })
+    c.update(csrf(request))
+    return HttpResponse(t.render(c))
+
+def signin(request):
+    t=loader.get_template('fileapp/signin.html')
+    c=Context({})
+    c.update(csrf(request))
+    return HttpResponse(t.render(c))
+
+def register(request):
+    t=loader.get_template('fileapp/register.html')
+    c=Context({})
+    c.update(csrf(request))
+    return HttpResponse(t.render(c))    
+    
+
+def doregister(request):
+    # selected_choice = p.choice_set.get(pk=request.POST['choice'])
+    try: # for missing arguements
+        u=request.POST['username']
+        p=request.POST['password']
+        if (not u) or ( not p):
+            raise Exception
+        try: #see if user exists
+            old_user=User.objects.get(username=u)
+            return redirect(getErrorURL("User already registered",'/register'))
+        except Exception: #user does not already exist; continue processing
+            user=User()
+            user.username=u
+            user.password_hash=hashlib.md5(p+'salt').hexdigest()
+            user.save()
+            request.session['username']=u #update current user
+    except Exception:
+        return redirect(getErrorUrl("Please enter details",'/register'))
+    return redirect('/home')
+
+
+def dosignout(request):
+    request.session['username']=None
+    return redirect('/signin')
+
+
+def dosignin(request):
+    try: # for missing arguements
+        u=request.POST['username']
+        p=request.POST['password']
+        try: #see if user exists
+            user=User.objects.get(username=u)
+            try_pass=hashlib.md5(p+'salt').hexdigest()
+            if(user.password_hash!=try_pass):
+                return redirect()
+                raise Exception
+            else:
+                request.session['username']=u
+        except Exception:
+            return redirect(getErrorURL("Authentication Failed",'/signin'))
+    except Exception:
+        return redirect(getErrorURL("Please enter details",'/signin'))
+    return redirect('/home')
+
+def error(request):
+    try: # for missing arguements
+        message=request.GET['message']
+        link=request.GET['link']
+        t=loader.get_template('fileapp/error.html')
+        c=Context({
+            'message':message,
+            'link':link
+        })
+        return HttpResponse(t.render(c))
+    except Exception:
+        return redirect('/home')
+
+def upload(request):
+    logged_in_username=''
+    try:
+        logged_in_username=request.session['username'] #exception may be raised here (example session does not have key 'username'
+        if not logged_in_username: #if i have signed out then session variable will be none
+            raise Exception('abcd')
+    except Exception:
+        return redirect("/signin")
+
+    #try:
+    newfile = File2()#request.POST, request.FILES)#(docfile = request.FILES['file'])
+    newfile.filename="afile"
+    newfile.user=User.objects.get(username=logged_in_username)
+    newfile.thefile=request.FILES['file']
+    newfile.save()
+    #except Exception:
+    #    return redirect(getErrorURL('File not found', '/home'))
+
+            # Redirect to the document list after POST
+    return redirect("/home")

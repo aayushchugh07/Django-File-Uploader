@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> File home </title>
+  </head>
+  <body>
+    {% if username %} 
+    <p>Welcome,  {{ username }} </p>
+    {% endif %}
+    <a href="/dosignout" >Click to sign out </a>
+    <h1> Upload files </h1>
+    <form action="/upload/" method="POST" enctype="multipart/form-data">{% csrf_token %}
+      <input name="file" type="file"> </input>
+      <input type="submit"> </input>
+    </form>
+    {% if files %}
+    <ul>
+      {% for file in files %}
+      <li>
+	<h2> {{ file.filename }} </h2>
+	<a href="/dodownload?filename={{ file.filename_for_url }}" > Download </a>
+      </li>
+      {% endfor %}
+    {% endif %}
+    </ul>
+  </body>
+</html>
+
