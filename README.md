@@ -1,10 +1,8 @@
 Django-File-Uploader
 ====================
 
-A basic file uploader built using django, covering all essential functionalities in the backend. 
------------------------------------------------
-
-To try, follow these simple steps:
+<p> <strong> A basic file uploader built using django, covering all essential functionalities in the backend. </strong> </p>
+To try, follow these simple steps: <br />
 1. Checkout the source code ( git clone https://github.com/aayushchugh07/Django-File-Uploader ) <br />
 2. Make sure you have django installed <br />
 3. Change the directory to mysite (cd mysite). current directory should be mysite only, this is essential. <br />
