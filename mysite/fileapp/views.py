@@ -122,14 +122,18 @@ def upload(request):
         return redirect("/signin")
 
     newfile = File2()
-    newfile.filename=request.FILES['file'].name
-    newfile.user=User.objects.get(username=logged_in_username)
-    newfile.thefile=request.FILES['file']
+    try:
+        newfile.filename=request.FILES['file'].name
+        newfile.user=User.objects.get(username=logged_in_username)
+        newfile.thefile=request.FILES['file']
+    except Exception:
+        return redirect(getErrorURL("No file uploaded","/home"))
     
     newfile.save()
     return redirect("/home")
 
-
+def textEscape(text):
+    return text
 
 def download(request):
     logged_in_username=''
@@ -147,7 +151,7 @@ def download(request):
     
     filename = file.filename
     response = HttpResponse(file.thefile.file, content_type='text/plain')
-    response['Content-Disposition'] = 'attachment; filename=%s' % filename
+    response['Content-Disposition'] = 'attachment; filename="%s"' % (filename)
     return response
         
     

@@ -13,12 +13,14 @@
       <input name="file" type="file"> </input>
       <input type="submit"> </input>
     </form>
+    <hr />
+    <h1> Download files </h1>
     {% if files %}
     <ul>
       {% for file in files %}
       <li>
 	<h2> {{ file.filename }} </h2>
-	<a href="/dodownload?filename={{ file.filename_for_url }}" > Download </a>
+	<a href="/download?id={{ file.id }}" > Download </a>
       </li>
       {% endfor %}
     {% endif %}

@@ -4,39 +4,43 @@ from django.http import HttpResponse
 from django.core.context_processors import csrf
 from fileapp.models import User, File2
 from django.shortcuts import redirect
-#from .forms import UploadFileForm
 import urllib, cgi, hashlib, sys
-
-def perr(x):
-    errfile=open("errfile","a")
-    errfile.write(str(x))
-    errfile.close()
 
 def getErrorURL(message, redirect_link):
     return '/error?message='+urllib.quote_plus(message)+'&link='+urllib.quote_plus(redirect_link)
 
 def home(request):
-    # latest_poll_list = Poll.objects.all().order_by('-pub_date')[:5]
     logged_in_username=''
     try:
-        logged_in_username=request.session['username'] #exception may be raised here (example session does not have key 'username'
+        logged_in_username=request.session['username'] #exception may be raised here (for example session does not have key 'username'
         if not logged_in_username: #if i have signed out then session variable will be none
             raise Exception('abcd')
     except Exception:
         return redirect("/signin")
+
     t = loader.get_template('fileapp/home.html')
     c = Context({
-        'username': logged_in_username,
-        'files': [{'filename':cgi.escape('maggi',quote=True), 'filename_for_url':urllib.quote_plus('maggi')}]
+        'username': logged_in_username
     })
+    c['files']=[]
+    user_=User.objects.get(username=logged_in_username)
+
+    for file in File2.objects.filter(user=user_):
+        fileurl=file.thefile.url
+        filename=file.filename
+        c['files'].append({'filename':cgi.escape(filename,quote=True), 'id':file.id})
     c.update(csrf(request))
     return HttpResponse(t.render(c))
+
+
 
 def signin(request):
     t=loader.get_template('fileapp/signin.html')
     c=Context({})
     c.update(csrf(request))
     return HttpResponse(t.render(c))
+
+
 
 def register(request):
     t=loader.get_template('fileapp/register.html')
@@ -45,8 +49,8 @@ def register(request):
     return HttpResponse(t.render(c))    
     
 
+
 def doregister(request):
-    # selected_choice = p.choice_set.get(pk=request.POST['choice'])
     try: # for missing arguements
         u=request.POST['username']
         p=request.POST['password']
@@ -58,7 +62,7 @@ def doregister(request):
         except Exception: #user does not already exist; continue processing
             user=User()
             user.username=u
-            user.password_hash=hashlib.md5(p+'salt').hexdigest()
+            user.password_hash=hashlib.md5(p+'salt').hexdigest() #save salted hashes for security 
             user.save()
             request.session['username']=u #update current user
     except Exception:
@@ -66,9 +70,11 @@ def doregister(request):
     return redirect('/home')
 
 
+
 def dosignout(request):
     request.session['username']=None
     return redirect('/signin')
+
 
 
 def dosignin(request):
@@ -89,6 +95,8 @@ def dosignin(request):
         return redirect(getErrorURL("Please enter details",'/signin'))
     return redirect('/home')
 
+
+
 def error(request):
     try: # for missing arguements
         message=request.GET['message']
@@ -102,23 +110,48 @@ def error(request):
     except Exception:
         return redirect('/home')
 
+
+
 def upload(request):
     logged_in_username=''
     try:
-        logged_in_username=request.session['username'] #exception may be raised here (example session does not have key 'username'
-        if not logged_in_username: #if i have signed out then session variable will be none
+        logged_in_username=request.session['username'] 
+        if not logged_in_username:
             raise Exception('abcd')
     except Exception:
         return redirect("/signin")
 
-    #try:
-    newfile = File2()#request.POST, request.FILES)#(docfile = request.FILES['file'])
-    newfile.filename="afile"
+    newfile = File2()
+    newfile.filename=request.FILES['file'].name
     newfile.user=User.objects.get(username=logged_in_username)
     newfile.thefile=request.FILES['file']
+    
     newfile.save()
-    #except Exception:
-    #    return redirect(getErrorURL('File not found', '/home'))
-
-            # Redirect to the document list after POST
     return redirect("/home")
+
+
+
+def download(request):
+    logged_in_username=''
+    try:
+        logged_in_username=request.session['username'] 
+        if not logged_in_username: 
+            raise Exception('abcd')
+    except Exception:
+        return redirect("/home")
+    
+    user=User.objects.get(username=logged_in_username)
+    file=File2.objects.get(id=request.GET['id'])
+    if(file.user!=user):
+        return redirect(getErrorURL("You do not have permissions to download this content", "/home"))
+    
+    filename = file.filename
+    response = HttpResponse(file.thefile.file, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename=%s' % filename
+    return response
+        
+    
+# def perr(x):
+#     errfile=open("errfile","a")
+#     errfile.write(str(x))
+#     errfile.close()
